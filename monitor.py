@@ -19,7 +19,8 @@ def _acquire_instance_lock() -> bool:
     global _LOCK_SOCKET
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 0)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         s.bind(("127.0.0.1", _LOCK_PORT))
         s.listen(1)
         _LOCK_SOCKET = s
@@ -163,7 +164,7 @@ class UsageBar(ctk.CTkFrame):
 
         self.reset_label = ctk.CTkLabel(row, text="",
                                         font=ctk.CTkFont(size=10),
-                                        text_color="#444444", anchor="e")
+                                        text_color="#7a7a8a", anchor="e")
         self.reset_label.pack(side="right", padx=(0, 6))
 
         self.progress = ctk.CTkProgressBar(self, height=10, corner_radius=4)
@@ -222,9 +223,10 @@ class MonitorApp(ctk.CTk):
         title_frame.pack(fill="x")
         title_frame.pack_propagate(False)
 
-        ctk.CTkLabel(title_frame, text="Claude Usage",
-                     font=ctk.CTkFont(size=12, weight="bold"),
-                     text_color="#66aaff").pack(side="left", padx=10)
+        self.updated_title = ctk.CTkLabel(title_frame, text="",
+                     font=ctk.CTkFont(size=10),
+                     text_color="#555566")
+        self.updated_title.pack(side="left", padx=10)
 
         ctk.CTkButton(title_frame, text="✕", width=24, height=24,
                       fg_color="transparent", hover_color="#550000",
@@ -284,9 +286,11 @@ class MonitorApp(ctk.CTk):
         if data:
             self.bar_session.update(data.get("session_pct"), data.get("session_reset"))
             self.bar_week.update(data.get("week_pct"), data.get("week_reset"))
-            now_str = datetime.now().strftime("%H:%M:%S")
-            self.status_label.configure(text=f"Updated {now_str}")
+            now_str = datetime.now().strftime("%H:%M")
+            self.updated_title.configure(text=f"updated {now_str}")
+            self.status_label.configure(text=f"Updated {datetime.now().strftime('%H:%M:%S')}")
         else:
+            self.updated_title.configure(text="failed")
             self.status_label.configure(text="Failed to fetch")
 
         interval_ms = int(self.config_data.get("refresh_interval_sec", 60)) * 1000
