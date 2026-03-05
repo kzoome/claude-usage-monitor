@@ -150,24 +150,24 @@ class UsageBar(ctk.CTkFrame):
         super().__init__(master, fg_color="transparent", **kwargs)
 
         row = ctk.CTkFrame(self, fg_color="transparent")
-        row.pack(fill="x", pady=(0, 2))
+        row.pack(fill="x", pady=(0, 1))
 
         self.label_text = ctk.CTkLabel(row, text=label,
-                                       font=ctk.CTkFont(size=11, weight="bold"),
+                                       font=ctk.CTkFont(size=10, weight="bold"),
                                        text_color="#999999", anchor="w")
         self.label_text.pack(side="left")
 
         self.pct_label = ctk.CTkLabel(row, text="–%",
-                                      font=ctk.CTkFont(size=11, weight="bold"),
+                                      font=ctk.CTkFont(size=10, weight="bold"),
                                       text_color="#555555", anchor="e")
         self.pct_label.pack(side="right")
 
         self.reset_label = ctk.CTkLabel(row, text="",
-                                        font=ctk.CTkFont(size=10),
+                                        font=ctk.CTkFont(size=9),
                                         text_color="#7a7a8a", anchor="e")
-        self.reset_label.pack(side="right", padx=(0, 6))
+        self.reset_label.pack(side="right", padx=(0, 4))
 
-        self.progress = ctk.CTkProgressBar(self, height=10, corner_radius=4)
+        self.progress = ctk.CTkProgressBar(self, height=8, corner_radius=3)
         self.progress.set(0)
         self.progress.pack(fill="x")
 
@@ -202,13 +202,13 @@ class MonitorApp(ctk.CTk):
         self._fetching = False
 
         self.title("Claude Usage")
-        self.geometry("280x180")
+        self.geometry("240x140")
         self.resizable(False, False)
         self.attributes("-topmost", True)
 
         self.update_idletasks()
         sw = self.winfo_screenwidth()
-        self.geometry(f"280x180+{sw - 296}+40")
+        self.geometry(f"240x140+{sw - 256}+40")
 
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
@@ -219,49 +219,33 @@ class MonitorApp(ctk.CTk):
     def _build_ui(self):
         # Title bar
         title_frame = ctk.CTkFrame(self, fg_color=("#1a1a2e", "#1a1a2e"),
-                                   corner_radius=0, height=32)
+                                   corner_radius=0, height=28)
         title_frame.pack(fill="x")
         title_frame.pack_propagate(False)
 
         self.updated_title = ctk.CTkLabel(title_frame, text="",
-                     font=ctk.CTkFont(size=10),
+                     font=ctk.CTkFont(size=9),
                      text_color="#555566")
-        self.updated_title.pack(side="left", padx=10)
+        self.updated_title.pack(side="left", padx=8)
 
-        ctk.CTkButton(title_frame, text="✕", width=24, height=24,
+        ctk.CTkButton(title_frame, text="✕", width=20, height=20,
                       fg_color="transparent", hover_color="#550000",
-                      font=ctk.CTkFont(size=12), command=self.destroy).pack(side="right", padx=3)
+                      font=ctk.CTkFont(size=11), command=self.destroy).pack(side="right", padx=2)
 
-        self.refresh_btn = ctk.CTkButton(title_frame, text="↻", width=24, height=24,
+        self.refresh_btn = ctk.CTkButton(title_frame, text="↻", width=20, height=20,
                                          fg_color="transparent", hover_color="#1a3a5e",
-                                         font=ctk.CTkFont(size=14), command=self.refresh)
+                                         font=ctk.CTkFont(size=12), command=self.refresh)
         self.refresh_btn.pack(side="right", padx=1)
 
         # Content
         content = ctk.CTkFrame(self, fg_color="transparent")
-        content.pack(fill="both", expand=True, padx=12, pady=10)
+        content.pack(fill="both", expand=True, padx=10, pady=6)
 
         self.bar_session = UsageBar(content, "Session")
-        self.bar_session.pack(fill="x", pady=(0, 10))
+        self.bar_session.pack(fill="x", pady=(0, 6))
 
         self.bar_week = UsageBar(content, "Weekly")
         self.bar_week.pack(fill="x")
-
-        # Footer
-        footer = ctk.CTkFrame(self, fg_color=("#111122", "#111122"),
-                              corner_radius=0, height=24)
-        footer.pack(fill="x", side="bottom")
-        footer.pack_propagate(False)
-
-        self.status_label = ctk.CTkLabel(footer, text="Fetching…",
-                                         font=ctk.CTkFont(size=9),
-                                         text_color="#444444")
-        self.status_label.pack(side="left", padx=8)
-
-        interval = self.config_data.get("refresh_interval_sec", 60)
-        ctk.CTkLabel(footer, text=f"⟳ {interval}s",
-                     font=ctk.CTkFont(size=9),
-                     text_color="#444444").pack(side="right", padx=8)
 
     def refresh(self):
         if self._fetching:
@@ -272,7 +256,6 @@ class MonitorApp(ctk.CTk):
 
         self._fetching = True
         self.refresh_btn.configure(state="disabled", text="…")
-        self.status_label.configure(text="Fetching…")
         threading.Thread(target=self._fetch_and_update, daemon=True).start()
 
     def _fetch_and_update(self):
@@ -287,11 +270,9 @@ class MonitorApp(ctk.CTk):
             self.bar_session.update(data.get("session_pct"), data.get("session_reset"))
             self.bar_week.update(data.get("week_pct"), data.get("week_reset"))
             now_str = datetime.now().strftime("%H:%M")
-            self.updated_title.configure(text=f"updated {now_str}")
-            self.status_label.configure(text=f"Updated {datetime.now().strftime('%H:%M:%S')}")
+            self.updated_title.configure(text=f"✓ {now_str}")
         else:
-            self.updated_title.configure(text="failed")
-            self.status_label.configure(text="Failed to fetch")
+            self.updated_title.configure(text="✗ error")
 
         interval_ms = int(self.config_data.get("refresh_interval_sec", 60)) * 1000
         self._refresh_job = self.after(interval_ms, self.refresh)
